@@ -60,8 +60,9 @@ public class PlayingActivity extends BaseGameActivity {
 	private enum ControlDirection {LEFT, UP, RIGHT, DOWN, NULL};
 	private ControlDirection leftControl = ControlDirection.NULL, 
 			rightControl = ControlDirection.NULL;
-	private boolean isLeftMoved = false, isRightMoved = false;
+	private boolean isLeftMoved = true, isRightMoved = false;
 	private final double MID_VALUE = 0.785;
+	private final int SPRITE_VELOCITY = 50;
 	@Override
 	public Engine onLoadEngine() {
 		Toast.makeText(this, "The tile the player is walking on will be highlighted.", Toast.LENGTH_LONG).show();
@@ -131,10 +132,10 @@ public class PlayingActivity extends BaseGameActivity {
 			Debug.e(tmxle);
 		}
 		
-		for(int i=0; i<this.mTMXTiledMap.getTMXObjectGroups().size(); i++)
+		/*for(int i=0; i<this.mTMXTiledMap.getTMXObjectGroups().size(); i++)
 			Log.d("TMX", 
 					this.mTMXTiledMap.getTMXObjectGroups().get(i)
-					.getTMXObjects().get(0).getTMXObjectProperties().toString());
+					.getTMXObjects().get(0).getTMXObjectProperties().toString());*/
 		final TMXLayer tmxLayer = this.mTMXTiledMap.getTMXLayers().get(0);
 		scene.attachChild(tmxLayer);
 
@@ -170,15 +171,37 @@ public class PlayingActivity extends BaseGameActivity {
 				/* Get the tile the feet of the player are currently waking on. */
 				final TMXTile tmxTile = 
 						tmxLayer.getTMXTileAt(playerFootCordinates[Constants.VERTEX_INDEX_X], playerFootCordinates[Constants.VERTEX_INDEX_Y]);
-				
-				//tmxTile.
-				Log.d("TMX", tmxTile.getTileColumn() +":"+tmxTile.getTileRow()+"\n"+
-						tmxTile.getTMXTileProperties(mTMXTiledMap));
-				isLeftMoved = true;
-				if(tmxTile.getTMXTileProperties(mTMXTiledMap) != null &&
-						tmxTile.getTMXTileProperties(mTMXTiledMap)
-						.equals("[pass,false]")){
+				if(tmxTile != null)
+				Log.d("position", tmxTile.getTileColumn() + ":" + tmxTile.getTileRow());
+				TMXTile tile = null; 
+				if(tmxTile != null){
+					switch(leftControl){
+					case LEFT:
+						tile = tmxLayer.getTMXTile(tmxTile.getTileColumn() - 1, 
+								tmxTile.getTileRow());
+						break;
+					case RIGHT:
+						tile = tmxLayer.getTMXTile(tmxTile.getTileColumn() + 1, 
+								tmxTile.getTileRow());
+						break;
+					case UP:
+						tile = tmxLayer.getTMXTile(tmxTile.getTileColumn(), 
+								tmxTile.getTileRow() - 1);
+						break;
+					case DOWN:
+						tile = tmxLayer.getTMXTile(tmxTile.getTileColumn(), 
+								tmxTile.getTileRow() + 1);
+						break;
+					case NULL:
+						break;
+					}
+				}
+				if(tile != null && tile.getTMXTileProperties(mTMXTiledMap) != null &&
+						tile.getTMXTileProperties(mTMXTiledMap)
+						.get(0).getValue().equals("false")){
 					isLeftMoved = false;
+				}else{
+					isLeftMoved = true;
 				}
 
 				if(tmxTile != null) {
@@ -200,29 +223,28 @@ public class PlayingActivity extends BaseGameActivity {
 						this.mOnScreenControlKnobTextureRegion, 
 						0.1f, new IAnalogOnScreenControlListener() {
 			@Override
-			public void onControlChange(final BaseOnScreenControl pBaseOnScreenControl, final float pValueX, final float pValueY) {
-				if(isLeftMoved){
-					physicsHandler.setVelocity(pValueX * 100, pValueY * 100);
-				}
-				
+			public void onControlChange(final BaseOnScreenControl pBaseOnScreenControl,
+					final float pValueX, final float pValueY) {
+
+				Log.d("TMX", isLeftMoved + "");
 				Log.d("Playing", leftControl + ":" + rightControl);
 				if(pValueX == 0 && pValueY == 0){
 					leftControl = ControlDirection.NULL;
 				}else{
 					double result = Math.atan(pValueY/pValueX);
 					if(pValueY > 0){
-						if(Math.abs(result) > MID_VALUE){
+						if(Math.abs(result) > MID_VALUE)
 							leftControl = ControlDirection.DOWN;
-						}else{
+						else{
 							if(pValueX > 0)
 								leftControl = ControlDirection.RIGHT;
 							else
 								leftControl = ControlDirection.LEFT;
 						}
 					}else{
-						if(Math.abs(result) > MID_VALUE){
+						if(Math.abs(result) > MID_VALUE)
 							leftControl = ControlDirection.UP;
-						}else{
+						else{
 							if(pValueX > 0)
 								leftControl = ControlDirection.RIGHT;
 							else
@@ -230,7 +252,27 @@ public class PlayingActivity extends BaseGameActivity {
 						}
 					}
 				}
-
+				
+				if(!isLeftMoved){
+					physicsHandler.setVelocity(0, 0);
+				}else{
+					switch(leftControl){
+					case LEFT:
+						physicsHandler.setVelocity(-SPRITE_VELOCITY, 0);
+						break;
+					case RIGHT:
+						physicsHandler.setVelocity(SPRITE_VELOCITY, 0);
+						break;
+					case UP:
+						physicsHandler.setVelocity(0, -SPRITE_VELOCITY);
+						break;
+					case DOWN:
+						physicsHandler.setVelocity(0, SPRITE_VELOCITY);
+						break;
+					case NULL:
+						physicsHandler.setVelocity(0, 0);
+					}
+				}
 				switch(leftControl) {
 				case DOWN:
 					player.animate(new long[]{200, 200, 200}, 6, 8, true);
